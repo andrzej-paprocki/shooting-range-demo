@@ -1,0 +1,1 @@
+﻿document.write('<div id="target5">');	document.write('<div class="wrapperShoots">');		document.write('<div id="cel5">cel 5:</div>');		document.write('<div class="probel"></div>');		document.write('<div id="cel5Digits"></div>');	document.write('</div>');document.write('</div>');
