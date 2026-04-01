@@ -1,0 +1,547 @@
+<!DOCTYPE HTML>
+<html>
+<head> 
+	<title>Przeglądarkowa Strzelnica </title>
+	<script src="js/jquery.min.js"></script>
+	<link rel="stylesheet" href="css/styles.css">
+	<meta charset="utf-8">
+
+	<script>
+		document.addEventListener("contextmenu", function(e) {
+		    e.preventDefault();
+		});
+	</script>
+</head>
+
+<body>
+
+	<div id="menu">
+		<div id="caution">
+			<p>Uwaga! Gra może nie działać poprawnie w przeglądarce Safari...</p>
+			<p>Proszę użyć Chrome, Firefox, Opera.</p>
+		</div>
+		<input type="text" id="inputAmmo" class="font input" value="30" onkeypress="return (event.charCode >= 48 && event.charCode <= 57);">
+		<input type="text" id="inputTargets" class="font input" value="5" onkeypress="return (event.charCode >= 48 && event.charCode <= 57);">
+		<div id="buttonStart"></div> 
+	</div>
+
+	<div id="fonPodMenu"></div>
+
+	<div id="wrapper">
+		<div id="mydiv" class="nocursor noSelect">
+			<img id="pistolet" class="noSelect" name="pistolet" src="img/pistolet00.svg">
+
+			<div id="inthis" class="noSelect">
+
+				<script defer>
+					const inthis = document.getElementById('inthis'); // родитель для мишеней
+
+					for (let m = 1; m <= 5; m++) {
+					    // create mishen container
+					    const mishen = document.createElement('div');
+					    mishen.id = 'mishen' + m;
+					    mishen.className = 'mishen';
+
+					    // create digits 9,8,7,6
+					    for (let d = 9; d >= 6; d--) {
+					        const p = document.createElement('p');
+					        p.id = `mishen-${m}-digit${d}`;
+					        p.className = `digit digit${d} noSelect`;
+					        p.textContent = d;
+					        mishen.appendChild(p);
+					    }
+
+					    // create rings 6-10
+					    for (let r = 6; r <= 10; r++) {
+					        const div = document.createElement('div');
+					        div.id = `mishen-${m}-ring${r}`;
+					        div.className = `ring ring${r}`;
+					        mishen.appendChild(div);
+					    }
+
+					    // create shapes
+					    const shapes = ['square', 'rectangle', 'trapezoid'];
+					    for (let shape of shapes) {
+					        const div = document.createElement('div');
+					        div.id = `mishen-${m}-${shape}`;
+					        div.className = shape;
+					        mishen.appendChild(div);
+					    }
+
+					    // insert mishen into container
+					    inthis.appendChild(mishen);
+					}
+				</script>
+
+				<img src="img/shadow1.png" id="shadow1">
+				<img src="img/shadow2.png" id="shadow2">
+				<img src="img/shadow4.png" id="shadow4">
+				<img src="img/shadow5.png" id="shadow5">
+			</div>
+		</div>
+
+		<div id="mytable" class="unselectable">
+			<div id="level">wyniki  Level 1</div>
+
+			<div class="wrapperShoots">
+				<div id="shootsText">ilość strzałów:</div>
+				<div class="probel"></div>
+				<div id="shootsDigits">0</div>
+			</div>
+
+			<div class="wrapperShoots">
+				<div id="time">czas, <span class="secunda">sek</span>:</div>
+				<div class="probel"></div>
+				<div id="sekundomer">0.000</div>
+			</div>
+
+			<script>
+
+
+				const mytable = document.getElementById('mytable'); // table for scores
+
+				for (let i = 1; i <= 5; i++) {
+				    // create a container
+				    const targetDiv = document.createElement('div');
+				    targetDiv.id = 'target' + i;
+
+				    // create inner box wrapperShoots
+				    const wrapper = document.createElement('div');
+				    wrapper.className = 'wrapperShoots';
+
+				    // create titlt
+				    const cel = document.createElement('div');
+				    cel.id = 'cel' + i;
+				    cel.textContent = `cel ${i}:`;
+
+				    // create a separator
+				    const probel = document.createElement('div');
+				    probel.className = 'probel';
+
+				    // create a box for digits
+				    const digits = document.createElement('div');
+				    digits.id = 'cel' + i + 'Digits';
+
+				    // collect all together
+				    wrapper.appendChild(cel);
+				    wrapper.appendChild(probel);
+				    wrapper.appendChild(digits);
+				    targetDiv.appendChild(wrapper);
+
+				    // isert in table
+				    mytable.appendChild(targetDiv);
+				}
+			</script>
+
+			<div class="wrapperShoots">
+				<div id="scores">ilość punktów:</div>
+				<div class="probel"></div>
+				<div id="scoresDigits">0</div>
+			</div>
+
+			<div id="replay">restart game</div>
+		</div>
+
+		<div class="footer noSelect">
+		<div id="obojma" class="noSelect"></div>
+	</div>
+	</div>
+
+	<script>
+
+window.onload = setHeight();
+wrapper.style.opacity = "0";
+replay.style.opacity = "0";
+replay.style.pointerEvents = "none";
+
+inthis.style.opacity = "0";
+pistolet.style.opacity = "0";
+obojma.style.opacity = "0";
+
+			// declaring variables and functions: start
+			var popadaniy = 0;
+			var numIdDirki = 0; // for hole id, that is situated on the target
+			var ammo;
+			var targets;
+			var distance;
+			var deltaY;
+			var inthisWidth;
+			var numberMishenej;
+			var marginLeftMisheni;
+			var marginLeftDiva;
+			var widthMisheni;
+			var usedAmmo = 0; // how many shots is made
+			var timer2 = 1; // if set to 0, the stopwatch will stop
+			mydiv.style.pointerEvents = "none";
+			buttonStart.addEventListener('click', go);
+			replay.addEventListener('click', reload);
+
+
+			$('#inputAmmo').keypress(function(event) {
+				if (event.keyCode === 13) {
+					$("#buttonStart").click();
+				}
+			});
+
+
+			$('#inputTargets').keypress(function(event) {
+				if (event.keyCode === 13) {
+					$("#buttonStart").click();
+				}
+			});
+
+
+			function reload() { 
+				timer2 = 0;
+				location.reload();
+			}
+
+			
+			// we subtract from the string of type "100px" only numbers
+			function stringToNumber(x) {
+				x = parseInt(x.replace(/\D+/g,''));
+				return x;
+			}
+
+
+			function zvukRikosheta() {
+				var min2 = 0;
+				var max2 = 5;
+				var flag2 = Math.floor(Math.random() * (max2 - min2 + 1)) + min2;
+				if (flag2 == 5) {
+					var zvukRikosheta = new Audio("sound/zvukRikosheta.mp3");
+					zvukRikosheta.play();
+				} 
+			}
+
+
+			function setHeight() {			
+				delta = window.outerHeight - window.innerHeight;
+				h = 780 + delta;
+				window.resizeTo(1360,h);
+				return h;
+			}
+
+
+			function funcSekundomer() {
+				timer = new Date().getTime();
+
+
+				var interval = setInterval(function() {
+					if (timer2 == 0) return;
+					sekundomer.innerHTML = (new Date().getTime() - timer) / 1000
+				}, 10);
+			}
+
+			// ---------------------------------------------------------
+			// declaring variables and functions: the end
+
+
+
+			// get the values from the menu, place the target: start 
+			function go() {		
+				funcSekundomer();	
+				replay.style.opacity = "1";
+				replay.style.pointerEvents = "auto";
+				wrapper.style.opacity = "1";
+				mydiv.style.pointerEvents = "auto";
+				var zvukZatvora = new Audio("sound/zatvor.mp3");
+				zvukZatvora.play();
+				ammo = +inputAmmo.value;
+				targets = +inputTargets.value;
+
+				// additional protection against the fool, in case of copy-paste nonsense in the input field
+				if (!isNaN(ammo) && !isNaN(targets)) {
+					if (ammo > 30) ammo = 30;
+					if (ammo <= 0) ammo = 30;
+
+					if (targets > 5) targets = 5;
+					if (targets <= 0) targets = 5;
+				}
+
+				else {
+					alert("proszę, tylko cyfry!");
+					reload();				
+				}
+
+
+				for (i=5; i>targets; i--) {
+					document.getElementById("mishen" + i).remove();
+					document.getElementById("target" + i).remove();
+				}
+
+
+				fonPodMenu.style.opacity = "0";
+				fonPodMenu.style.pointerEvents = "none";
+
+				inthis.style.opacity = "1";
+
+				buttonStart.style.opacity = "0";
+				buttonStart.style.pointerEvents = "none";
+
+				menu.style.opacity = "0";
+				menu.style.pointerEvents = "none";
+
+
+				inputAmmo.style.opacity = "0";
+				inputAmmo.style.pointerEvents = "none";
+
+				inputTargets.style.opacity = "0";
+				inputTargets.style.pointerEvents = "none";
+
+				pistolet.style.opacity = "1";
+
+				obojma.style.width = (900 - (30 - ammo) * 30) + "px"; 
+				obojma.style.opacity = "1";			  	
+
+			  	// the calculations to determine what affects the coordinates of the targets
+			  	deltaY = parseFloat($('#mydiv').css('paddingTop'));
+			  	numberMishenej = $('.mishen').size();
+			  	widthMisheni = parseFloat($('.mishen').css('width'));
+			  	inthisWidth = parseFloat($('#inthis').css('width'));
+			  	marginLeftMisheni = (inthisWidth - numberMishenej * widthMisheni) / (numberMishenej + 1);
+			  	$('.mishen').css('marginLeft', marginLeftMisheni);
+			  	marginLeftDiva = parseFloat($('#inthis').css('marginLeft'));
+
+
+				////////////////////////////////////////////////////////////////////////////////////////
+				//																					  //
+				// the target shadows																  //
+				//																					  //
+				////////////////////////////////////////////////////////////////////////////////////////
+				switch (targets) 
+				{
+					case 1:
+						shadow1.style.opacity = '0';
+						shadow2.style.opacity = '0';
+						shadow4.style.opacity = '0';
+						shadow5.style.opacity = '0';
+					break;
+
+					case 2:
+						shadow2.style.left = '712' + 'px';
+						shadow4.style.left = '840' + 'px';
+						shadow1.style.opacity = '0';
+						shadow5.style.opacity = '0';
+					break;
+
+					case 3:
+						shadow2.style.left = '670' + 'px';
+						shadow4.style.left = '885' + 'px';
+						shadow1.style.opacity = '0';
+						shadow5.style.opacity = '0';
+					break;
+
+					case 4:
+						shadow1.style.left = '637' + 'px';
+						shadow2.style.left = '740' + 'px';
+						shadow4.style.left = '813' + 'px';
+						shadow5.style.left = '915' + 'px';
+					break;
+
+					case 5:
+						shadow1.style.left = '620.333' + 'px';
+						shadow2.style.left = '705.666' + 'px';
+						shadow4.style.left = '846.666' + 'px';
+						shadow5.style.left = '930.5' + 'px';
+					break;
+
+					default:
+					break;
+				}
+
+
+					fonPodMenu.style.opacity = "0";
+					fonPodMenu.style.pointerEvents = "none";
+
+					buttonStart.style.opacity = "0";
+					buttonStart.style.pointerEvents = "none";
+
+					menu.style.opacity = "0";
+					menu.style.pointerEvents = "none";
+
+					inputAmmo.style.opacity = "0";
+					inputAmmo.style.pointerEvents = "none";
+
+					inputTargets.style.opacity = "0";
+					inputTargets.style.pointerEvents = "none";
+
+			} // go
+
+
+
+		    // preload 
+		    var kurokImg = new Image();
+		    kurokImg.src = "img/osechka.svg";
+		    var shotgun = new shotgun_array();
+
+		    function shotgun_array() {
+		      	for (n = 0; n != 5; n++) { // n - number of images in animation
+		      	        
+		      		this[n] = new Image();
+		      		this[n].src = "img/pistolet0" + n + ".svg";
+		      	}
+		      }
+
+		      var nc = 0;
+		      function shoot() {
+		      	if (nc == 5) {
+		      		pistolet.src = shotgun[0].src;
+		      		nc = 0;
+		      		return; 
+		      	}
+
+		      	pistolet.src = shotgun[nc++].src;
+		        setTimeout(shoot, 30);   // the smaller the number, the faster the return
+		      }
+
+
+		    mydiv.onmousemove = function(e) {
+			    // 250 рх - so the gun was below the target
+			    pistolet.style.top = (e.clientY - (pistolet.style.height / 2) ) - 250 + "px";
+			    if (stringToNumber(pistolet.style.top) < 200) pistolet.style.top = 250 + "px";
+			    if (e.clientY < 100) pistolet.style.top = 250 + "px";
+			    pistolet.style.left = (e.clientX - (pistolet.clientWidth / 2) ) + "px";
+			}
+
+
+		  	// shot: start
+		  	mydiv.onmousedown = function(e) {
+		  		if (ammo > 0) {
+		  			ammo -= 1;
+		  			obojma.style.width = (900 - (30 - ammo) * 30) + "px";
+
+		  			if (ammo == 0) {
+		  				timer2 = 0;
+		  				replay.innerHTML = "play again";
+		  			}
+
+		  			usedAmmo++;
+		  			shootsDigits.innerHTML = usedAmmo;
+		  			var snd = new Audio("sound/vistrel_bez_gilzy.mp3");
+		  			snd.play();
+
+		  			var min1 = 0;
+		  			var max1 = 5;
+		  			var flag1 = Math.floor(Math.random() * (max1 - min1 + 1)) + min1;
+
+		  			if (flag1 == 5) {
+		  				var glz = new Audio("sound/gilza.mp3");
+		  				glz.play();
+		  			}
+
+		  			shoot();
+		  			var dirka = document.createElement('div');
+
+		            // forcibly reduce the accuracy of fire
+		            var min = -4;
+		            var max = 4;
+		            dirka.style.left = parseInt(pistolet.style.left) + 176 + Math.floor(Math.random() * (max - min + 1)) + min + "px";
+		            dirka.style.top = parseInt(pistolet.style.top) - 150 + Math.floor(Math.random() * (max - min + 1)) + min + "px";
+
+		            var x1 = dirka.style.left;
+		            var x = parseInt(x1.replace(/\D+/g,''));
+		            
+		            var y1 = dirka.style.top;
+		            var y = parseInt(y1.replace(/\D+/g,''));
+
+		            // the assignment of holes: start
+		            var elem = document.elementFromPoint(x, y);
+		            var nomerMisheni = elem.id.split("-")[1];
+		            nomerMisheni = +nomerMisheni;
+
+		            if (nomerMisheni >=1 && nomerMisheni <=5) {
+		            	dirka.className = "circle";
+
+						// if the bullet enters the hole on the target, it is necessary that this hole had id;
+						// otherwise the bullet will think it got past and we will have trouble;
+						// the id must end with the target number.
+						dirka.id = "dirka" + numIdDirki + "-" + nomerMisheni;
+						dirka.style.left = x - (marginLeftDiva + nomerMisheni * marginLeftMisheni + (nomerMisheni-1) * widthMisheni) + "px"; 
+						dirka.style.top = y - deltaY + "px";
+						numIdDirki++;
+
+
+
+						///////////////////////////////////////////////////////////////////////////////////////////////////
+						//																								 //
+						// placing the figures in the results of shooting table                                          //    
+						//																								 //
+						///////////////////////////////////////////////////////////////////////////////////////////////////
+
+						var numberForTable = +(elem.id.split("-")[2].split("ring")[1]);
+						if ( !isNaN(numberForTable) ) {
+							document.getElementById('cel' + nomerMisheni + 'Digits').innerHTML = 
+							document.getElementById('cel' + nomerMisheni + 'Digits').innerHTML + numberForTable + "  ";
+
+								// if the number of holes is greater than 25, reduce the font
+								if ( (document.getElementById('cel' + nomerMisheni + 'Digits').innerHTML).split("  ").length > 25 ) {
+									document.getElementById('cel' + nomerMisheni + 'Digits').classList.add("smallFont");;
+								}
+								else {
+									document.getElementById('cel' + nomerMisheni + 'Digits').classList.remove("smallFont");
+								}
+							}
+						}
+
+
+						else {
+							setTimeout(zvukRikosheta, 50);
+							dirka.className = "mimo";
+
+							function deleteDirka()
+							{
+								$('.mimo').fadeOut();
+							}
+							setTimeout(deleteDirka, 50);							
+						}
+
+						elem.parentNode.insertBefore(dirka, elem.parentNode.firstChild);
+			            // the assignment of holes: the end
+
+						const array = elem.id.split("-");
+
+						if (array[2] === "ring10") {
+						    const el = document.getElementById(array[0] + array[1]);
+						    el.style.transform = "rotateY(87deg)";
+						    const targetIndex = array[1];
+
+						    // which shadows is used
+						    const shadowMap = {
+						        2: { '1': shadow2, '2': shadow4 },
+						        3: { '1': shadow2, '3': shadow4 },
+						        4: { '1': shadow1, '2': shadow2, '3': shadow4, '4': shadow5 },
+						        5: { '1': shadow1, '2': shadow2, '4': shadow4, '5': shadow5 }
+						    };
+
+						    const currentMap = shadowMap[targets];
+						    if (currentMap && currentMap[targetIndex]) {
+						        currentMap[targetIndex].style.transform = "rotateY(90deg)";
+						    }
+
+						    popadaniy++;
+						    if (popadaniy === numberMishenej) {
+						        timer2 = 0;
+						    }
+						}            
+
+				    } //if (ammo > 0)
+
+			    else {
+			    	var snd = new Audio("sound/osechka.mp3");
+			    	snd.play();
+			    	timer2 = 0; 
+			    }
+
+			    if (ammo <= 0) {
+			    	pistolet.src = kurokImg.src;
+			    }
+
+				    // the output of the shooting results in the element "scores", the fractional part has 2 decimal places
+				    scoresDigits.innerHTML = Math.round ( popadaniy / (sekundomer.innerHTML + usedAmmo) * 10 * 100) / 100;
+
+			} // shot: the end
+
+		</script>
+	</body>
+</html>
